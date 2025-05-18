@@ -21,16 +21,21 @@ interface AuthState {
   error: AuthError | null;
 }
 
+interface RegisterCredentials {
+  username: string;
+  email: string;
+  password: string;
+}
+
 export function useAuth() {
+  const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
-    loading: true,
+    loading: false,
     error: null,
   });
-  const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/auth/check');
@@ -49,21 +54,22 @@ export function useAuth() {
           error: {
             code: 'auth/network-error',
             message: 'Failed to check authentication status',
-            status: 500
-          }
+            status: 500,
+          },
         });
       }
     };
 
     checkAuth();
   }, []);
-  const login = async (email: string, password: string) => {
+
+  const login = async (email: string, password: string, rememberMe?: boolean) => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await response.json();
@@ -72,38 +78,73 @@ export function useAuth() {
         setAuthState({
           user: data.user,
           loading: false,
-          error: null
+          error: null,
         });
         router.push('/dashboard');
-        return { success: true };
+        return { success: true as const };
       } else {
         setAuthState({
           user: null,
           loading: false,
-          error: data.error
+          error: data.error,
         });
-        return { success: false, error: data.error };
+        return { success: false as const, error: data.error };
       }
     } catch (error) {
       const networkError = {
         code: 'auth/network-error',
         message: 'Failed to login. Please check your internet connection.',
-        status: 500
+        status: 500,
       };
       setAuthState({
         user: null,
         loading: false,
-        error: networkError
+        error: networkError,
       });
-      return { success: false, error: networkError };
+      return { success: false as const, error: networkError };
     }
   };
 
-  const register = async (userData: {
-    username: string;
-    email: string;
-    password: string;
-  }) => {
+  const logout = async () => {
+    setAuthState(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        setAuthState({
+          user: null,
+          loading: false,
+          error: null,
+        });
+        router.push('/login');
+        return { success: true as const };
+      } else {
+        const data = await response.json();
+        setAuthState(prev => ({
+          ...prev,
+          loading: false,
+          error: data.error,
+        }));
+        return { success: false as const, error: data.error };
+      }
+    } catch (error) {
+      const networkError = {
+        code: 'auth/network-error',
+        message: 'Failed to logout. Please check your internet connection.',
+        status: 500,
+      };
+      setAuthState(prev => ({
+        ...prev,
+        loading: false,
+        error: networkError,
+      }));
+      return { success: false as const, error: networkError };
+    }
+  };
+
+  const register = async (userData: RegisterCredentials) => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const response = await fetch('/api/auth/register', {
@@ -115,87 +156,35 @@ export function useAuth() {
       const data = await response.json();
 
       if (response.ok) {
-        setAuthState({
-          user: data.user,
-          loading: false,
-          error: null
-        });
-        router.push('/dashboard');
-        return { success: true };
+        router.push('/login?registered=true');
+        return { success: true as const };
       } else {
         setAuthState({
           user: null,
           loading: false,
-          error: data.error
+          error: data.error,
         });
-        return { success: false, error: data.error };
+        return { success: false as const, error: data.error };
       }
     } catch (error) {
       const networkError = {
         code: 'auth/network-error',
         message: 'Failed to register. Please check your internet connection.',
-        status: 500
+        status: 500,
       };
       setAuthState({
         user: null,
         loading: false,
-        error: networkError
+        error: networkError,
       });
-      return { success: false, error: networkError };
-    }
-  };
-
-  const logout = async () => {
-    setAuthState(prev => ({ ...prev, loading: true, error: null }));
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        setAuthState({
-          user: null,
-          loading: false,
-          error: null
-        });
-        router.push('/login');
-        return { success: true };
-      } else {
-        const data = await response.json();
-        setAuthState(prev => ({
-          ...prev,
-          loading: false,
-          error: data.error
-        }));
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      const networkError = {
-        code: 'auth/network-error',
-        message: 'Failed to logout. Please check your internet connection.',
-        status: 500
-      };
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: networkError
-      }));
-      return { success: false, error: networkError };
-    }
-  };
-        router.push('/login?registered=true');
-        return { success: true };
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      return { success: false, error: 'An error occurred during registration' };
+      return { success: false as const, error: networkError };
     }
   };
 
   return {
     user: authState.user,
     loading: authState.loading,
+    error: authState.error,
     login,
     logout,
     register,

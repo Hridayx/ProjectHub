@@ -14,8 +14,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+interface AuthState {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+}
+
 interface AuthProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   initialState?: {
     user: User | null;
     loading?: boolean;
@@ -23,71 +29,87 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children, initialState }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(initialState?.user ?? null);
-  const [loading, setLoading] = useState(initialState?.loading ?? true);
-  const [error, setError] = useState<string | null>(null);
+  const [authState, setAuthState] = useState<AuthState>({
+    user: initialState?.user ?? null,
+    loading: initialState?.loading ?? true,
+    error: null,
+  });
+
   const router = useRouter();
 
-  const clearError = () => setError(null);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/check');
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      } else {
-        const data = await response.json();
-        if (data.error?.code === 'auth/email-not-verified') {
-          setError('Please verify your email to continue');
-        }
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const clearError = () => setAuthState((prevState) => ({ ...prevState, error: null }));
 
   const login = async (email: string, password: string) => {
+    clearError();
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setUser(data.user);
+        setAuthState({
+          user: data.user,
+          loading: false,
+          error: null,
+        });
+        router.refresh();
         return { success: true };
       }
+
+      setAuthState((prevState) => ({
+        ...prevState,
+        error: data.error?.message || 'Login failed',
+      }));
       return { success: false, error: data.error };
     } catch (error) {
-      return { success: false, error: 'An error occurred during login' };
+      const message = 'An error occurred during login';
+      setAuthState((prevState) => ({
+        ...prevState,
+        error: message,
+      }));
+      return { success: false, error: message };
     }
   };
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setUser(null);
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      setAuthState({
+        user: null,
+        loading: false,
+        error: null,
+      });
+      router.refresh();
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+      setAuthState((prevState) => ({
+        ...prevState,
+        error: 'Logout failed. Please try again.',
+      }));
     }
   };
 
   const register = async (userData: { username: string; email: string; password: string }) => {
+    clearError();
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(userData),
       });
 
@@ -97,14 +119,67 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         router.push('/login?registered=true');
         return { success: true };
       }
+
+      setAuthState((prevState) => ({
+        ...prevState,
+        error: data.error?.message || 'Registration failed',
+      }));
       return { success: false, error: data.error };
     } catch (error) {
-      return { success: false, error: 'An error occurred during registration' };
+      const message = 'An error occurred during registration';
+      setAuthState((prevState) => ({
+        ...prevState,
+        error: message,
+      }));
+      return { success: false, error: message };
     }
   };
 
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check');
+        const data = await response.json();
+
+        if (response.ok) {
+          setAuthState({
+            user: data.user,
+            loading: false,
+            error: null,
+          });
+        } else {
+          setAuthState({
+            user: null,
+            loading: false,
+            error: data.error?.message || 'Authentication failed',
+          });
+        }
+      } catch (error) {
+        setAuthState({
+          user: null,
+          loading: false,
+          error: 'Failed to check authentication status',
+        });
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (authState.loading) {
+    return null;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, register, clearError }}>
+    <AuthContext.Provider
+      value={{
+        ...authState,
+        login,
+        logout,
+        register,
+        clearError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

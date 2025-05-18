@@ -1,43 +1,32 @@
-// Component: Replicates user authentication signup form
 'use client';
 
-import type React from 'react';
-
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Select } from './ui/select';
 import Link from 'next/link';
-import { Github } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import type { ApiError } from '@/lib/api-error';
+
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
 
 export function SignupForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student',
   });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear error when field is edited
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  const validatePassword = (password: string) => {
+  const validatePassword = (password: string): string => {
     const requirements = {
       length: password.length >= 8,
       uppercase: /[A-Z]/.test(password),
@@ -58,11 +47,10 @@ export function SignupForm() {
     if (!requirements.special) {
       return 'Password must contain at least one special character (!@#$%^&*)';
     }
-
     return '';
   };
 
-  const validateForm = () => {
+  const validateForm = (): Record<string, string> => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.username.trim()) {
@@ -84,19 +72,29 @@ export function SignupForm() {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrors({});
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setError(''); // Clear error when user types
+  };
 
-    if (!validateForm()) {
-      setLoading(false);
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const validationErrors = validateForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      const firstError = Object.values(validationErrors)[0];
+      if (firstError) {
+        setError(firstError);
+      }
       return;
     }
+
+    setLoading(true);
+    setError('');
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -111,77 +109,65 @@ export function SignupForm() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        if (data.error?.code === 'auth/validation-error') {
-          setErrors({ form: data.error.message });
-        } else if (data.error?.code === 'auth/user-exists') {
-          setErrors({ email: 'An account with this email already exists' });
-        } else {
-          setErrors({ form: 'Registration failed. Please try again.' });
-        }
-        return;
+      if (response.ok) {
+        const redirectUrl = '/login?registered=true';
+        window.location.href = `http://localhost:3000${redirectUrl}`;
+        router.push(redirectUrl);
+      } else {
+        const error = data.error as ApiError;
+        setError(error?.message || 'Registration failed');
       }
-
-      // Redirect to login with success message 
-      window.location.replace('/login?registered=true');
     } catch (error) {
-      console.error('Registration error:', error);
-      setErrors({ form: 'An unexpected error occurred. Please try again.' });
+      setError('An error occurred during registration');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-6 p-6 bg-white rounded-xl shadow-sm">
+    <div className="w-full max-w-md space-y-6 p-6 bg-white rounded-lg shadow-lg">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold">Create an Account</h1>
-        <p className="text-gray-500">Sign up with your university email to get started</p>
+        <p className="text-gray-500">Enter your details to create your account</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div aria-live="polite" className="text-sm text-red-500" role="alert">
-          {Object.values(errors).join(". ")}
+      {error && (
+        <div role="alert" className="p-3 text-sm bg-red-50 border border-red-200 text-red-600 rounded">
+          {error}
         </div>
-        {errors.submit && (
-          <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded" role="alert">
-            {errors.submit}
-          </div>
-        )}
+      )}
 
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
           <Label htmlFor="username">Username</Label>
           <Input
             id="username"
             name="username"
-            type="text"
             value={formData.username}
-            onChange={handleChange}
+            onChange={handleInputChange}
             required
-            aria-invalid={errors.username ? 'true' : 'false'}
+            aria-label="username"
+            aria-required="true"
+            aria-invalid={!!error && !formData.username}
           />
-          {errors.username && (
-            <p className="text-sm text-red-500" role="alert">{errors.username}</p>
-          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">University Email</Label>
+          <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             name="email"
             type="email"
+            value={formData.email}
+            onChange={handleInputChange}
             placeholder="your.name@mahindrauniversity.edu.in"
             pattern="[a-z0-9._%+-]+@mahindrauniversity\.edu\.in$"
-            value={formData.email}
-            onChange={handleChange}
+            title="Please use your Mahindra University email address"
             required
-            aria-invalid={errors.email ? 'true' : 'false'}
-            aria-describedby={errors.email ? 'email-error' : undefined}
+            aria-label="email"
+            aria-required="true"
+            aria-invalid={!!error && (!formData.email || !formData.email.endsWith('@mahindrauniversity.edu.in'))}
           />
-          {errors.email && (
-            <p id="email-error" className="text-sm text-red-500" role="alert">{errors.email}</p>
-          )}
         </div>
 
         <div className="space-y-2">
@@ -191,14 +177,14 @@ export function SignupForm() {
             name="password"
             type="password"
             value={formData.password}
-            onChange={handleChange}
+            onChange={handleInputChange}
             required
-            aria-invalid={errors.password ? 'true' : 'false'}
-            aria-describedby={errors.password ? 'password-error' : undefined}
+            aria-label="password"
+            aria-required="true"
+            aria-invalid={!!error && !!validatePassword(formData.password)}
+            minLength={8}
+            title="Password must be at least 8 characters long and include uppercase, lowercase, number, and special character"
           />
-          {errors.password && (
-            <p id="password-error" className="text-sm text-red-500" role="alert">{errors.password}</p>
-          )}
         </div>
 
         <div className="space-y-2">
@@ -208,31 +194,30 @@ export function SignupForm() {
             name="confirmPassword"
             type="password"
             value={formData.confirmPassword}
-            onChange={handleChange}
+            onChange={handleInputChange}
             required
-            aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-            aria-describedby={errors.confirmPassword ? 'confirm-password-error' : undefined}
+            aria-label="confirm password"
+            aria-required="true"
+            aria-invalid={!!error && formData.confirmPassword !== formData.password}
           />
-          {errors.confirmPassword && (
-            <p id="confirm-password-error" className="text-sm text-red-500" role="alert">{errors.confirmPassword}</p>
-          )}
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full bg-[#6b3e7c] hover:bg-[#5a2e6b]"
           disabled={loading}
+          aria-disabled={loading}
         >
           {loading ? 'Creating Account...' : 'Sign Up'}
         </Button>
-
-        <div className="text-sm text-center text-gray-500">
-          Already have an account?{' '}
-          <Link href="/login" className="text-[#6b3e7c] hover:underline">
-            Sign in
-          </Link>
-        </div>
       </form>
+
+      <p className="text-center text-sm text-gray-500">
+        Already have an account?{' '}
+        <Link href="/login" className="text-[#6b3e7c] hover:underline">
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 }

@@ -4,24 +4,104 @@ import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { setupServer } from 'msw/node';
 import { HttpResponse, http } from 'msw';
+import * as dotenv from 'dotenv';
+
+// Load test environment variables
+dotenv.config({ path: '.env.test' });
+
+// Ensure JWT_SECRET is available
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'test-jwt-secret';
+}
 
 expect.extend(matchers as any);
 
-// Mock ResizeObserver
-class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+// Mock location and router setup
+const mockLocation = {
+  href: 'http://localhost:3000',
+  pathname: '/',
+  search: '',
+  hash: '',
+};
+
+const mockRouter = {
+  push: vi.fn((url: string) => {
+    mockLocation.href = url.startsWith('http') ? url : `http://localhost:3000${url}`;
+  }),
+  replace: vi.fn(),
+  refresh: vi.fn(),
+};
+
+Object.defineProperty(window, 'location', { value: mockLocation, writable: true });
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => mockRouter,
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// Mock window.matchMedia and localStorage for next-themes
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // Deprecated but used by next-themes
+    removeListener: vi.fn(), // Deprecated but used by next-themes
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  clear: vi.fn(),
+  removeItem: vi.fn(),
+  key: vi.fn(),
+  length: 0,
+};
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
+// Mock ResizeObserver with proper TypeScript types
+interface ResizeObserverSize {
+  blockSize: number;
+  inlineSize: number;
 }
 
+interface ResizeObserverEntry {
+  target: Element;
+  contentRect: DOMRectReadOnly;
+  borderBoxSize: ReadonlyArray<ResizeObserverSize>;
+  contentBoxSize: ReadonlyArray<ResizeObserverSize>;
+  devicePixelContentBoxSize: ReadonlyArray<ResizeObserverSize>;
+}
+
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = ResizeObserverMock;
 window.ResizeObserver = ResizeObserverMock;
 
 global.fetch = vi.fn();
 
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
+// Mock Next.js cookies
+vi.mock('next/headers', () => ({
+  cookies: () => ({
+    get: vi.fn().mockImplementation((name: string) => ({
+      name,
+      value: name === 'auth-token' ? 'test.jwt.token' : undefined
+    })),
+    set: vi.fn(),
+    delete: vi.fn(),
+  }),
 }));
 
 afterEach(() => {
@@ -29,26 +109,17 @@ afterEach(() => {
   cleanup();
 });
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    refresh: vi.fn(),
-  }),
-  useSearchParams: () => new URLSearchParams(),
-}));
-
 interface AuthRequest {
   email: string;
   password?: string;
   username?: string;
+  rememberMe?: boolean;
 }
 
 const handlers = [
   http.post('/api/auth/register', async ({ request }) => {
     const body = await request.json() as AuthRequest;
-    
-    if (!body.email.endsWith('@mahindrauniversity.edu.in')) {
+      if (!body.email.endsWith('@mahindrauniversity.edu.in')) {
       return HttpResponse.json(
         {
           error: {
@@ -58,6 +129,19 @@ const handlers = [
           },
         },
         { status: 400 }
+      );
+    }
+
+    if (body.email === 'test.user@mahindrauniversity.edu.in') {
+      return HttpResponse.json(
+        {
+          error: {
+            code: 'auth/user-exists',
+            message: 'A user with this email already exists',
+            status: 409,
+          },
+        },
+        { status: 409 }
       );
     }
 
@@ -74,7 +158,6 @@ const handlers = [
       { status: 201 }
     );
   }),
-
   http.post('/api/auth/login', async ({ request }) => {
     const body = await request.json() as AuthRequest;
     
@@ -82,6 +165,7 @@ const handlers = [
       body.email === 'test.user@mahindrauniversity.edu.in' &&
       body.password === 'Test@123Password'
     ) {
+      const maxAge = body.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
       return HttpResponse.json(
         {
           user: {
@@ -89,13 +173,15 @@ const handlers = [
             email: body.email,
             username: 'testuser',
             role: 'student',
-            isVerified: true,
+            is_verified: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           },
         },
         { 
           status: 200,
           headers: {
-            'Set-Cookie': 'auth-token=test.jwt.token; Path=/; HttpOnly; Secure; SameSite=Strict',
+            'Set-Cookie': `auth-token=test.jwt.token; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`,
           },
         }
       );
@@ -112,7 +198,6 @@ const handlers = [
       { status: 401 }
     );
   }),
-
   http.get('/api/auth/check', async ({ request }) => {
     const authToken = request.headers.get('Cookie')?.includes('auth-token=test.jwt.token');
 
@@ -121,7 +206,7 @@ const handlers = [
         {
           error: {
             code: 'auth/unauthorized',
-            message: 'Unauthorized',
+            message: 'You must be logged in to access this resource',
             status: 401,
           },
         },
@@ -136,7 +221,9 @@ const handlers = [
           email: 'test.user@mahindrauniversity.edu.in',
           username: 'testuser',
           role: 'student',
-          isVerified: true,
+          is_verified: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
       },
       { status: 200 }
@@ -159,15 +246,6 @@ const handlers = [
 export const server = setupServer(...handlers);
 
 beforeAll(() => {
-  // Mock ResizeObserver
-  class ResizeObserverMock {
-    observe() { /* noop */ }
-    unobserve() { /* noop */ }
-    disconnect() { /* noop */ }
-  }
-  global.ResizeObserver = ResizeObserverMock;
-
-  // Start MSW server
   server.listen({ onUnhandledRequest: 'error' });
 });
 

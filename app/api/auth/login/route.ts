@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase-client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { AUTH_ERRORS, ApiErrorResponse, handleApiError } from '@/lib/api-error';
-import { generateToken, setAuthCookie } from '@/lib/auth-utils';
+import { generateToken, createAuthResponse } from '@/lib/auth-utils';
 
 // Input validation schema
 const loginSchema = z.object({
@@ -21,29 +21,26 @@ const loginSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
-    // Validate input
-    const validatedData = loginSchema.parse(body);
-    const { email, password, rememberMe } = validatedData;
+    const { email, password, rememberMe } = loginSchema.parse(body);
 
-    // Find user by email
-    const { data: user, error: userError } = await supabase
+    // Get user from database
+    const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, email, password, is_verified')
+      .select('*')
       .eq('email', email)
       .single();
 
-    if (userError || !user) {
+    if (error || !user) {
       throw new ApiErrorResponse(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
+    // Check password
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
       throw new ApiErrorResponse(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
 
-    // Check if email is verified
+    // Check email verification
     if (!user.is_verified) {
       throw new ApiErrorResponse(AUTH_ERRORS.EMAIL_NOT_VERIFIED);
     }
@@ -52,35 +49,19 @@ export async function POST(req: NextRequest) {
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      isVerified: user.is_verified
+      role: user.role,
+      isVerified: user.is_verified,
+      username: user.username
     });
-    
-    // Set auth cookie with optional remember me
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
-    setAuthCookie(token, maxAge);
 
-    return Response.json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        is_verified: user.is_verified
-      }
-    });
+    // Remove sensitive data from user object
+    const { password: _, ...safeUser } = user;
+
+    // Return response with auth cookie
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days if remember me, else 24 hours
+    return createAuthResponse(token, { user: safeUser }, maxAge);
+
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return Response.json(
-        {
-          error: {
-            code: 'auth/validation-error',
-            message: error.errors[0].message,
-            status: 400,
-          },
-        },
-        { status: 400 }
-      );
-    }
     return handleApiError(error);
   }
 }

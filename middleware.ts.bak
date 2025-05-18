@@ -1,0 +1,59 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+// Set runtime config to nodejs
+export const runtime = 'nodejs';
+
+// Define protected routes
+const protectedRoutes = [
+  '/dashboard',
+  '/profile',
+  '/projects',
+  '/submit-idea',
+  '/tasks',
+  '/mentor-projects',
+  '/community-projects',
+];
+
+export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // Check if the path is protected
+  if (protectedRoutes.some(route => path.startsWith(route))) {
+    const token = request.cookies.get('auth-token')?.value;
+
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // Get response from next middleware
+    const response = NextResponse.next();    try {
+      // Instead of verifying JWT here, we'll just check if the token exists
+      if (token) {
+        // Set cookie options for auth-token
+        response.cookies.set('auth-token', token);
+        return response;
+      }
+      // No token, redirect to login
+      return NextResponse.redirect(new URL('/login', request.url));
+    } catch (error) {
+      // Error handling
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+// Configure middleware matching
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/projects/:path*',
+    '/submit-idea/:path*',
+    '/tasks/:path*',
+    '/mentor-projects/:path*',
+    '/community-projects/:path*',
+  ],
+};

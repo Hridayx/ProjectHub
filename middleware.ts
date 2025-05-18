@@ -1,69 +1,65 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { verifyAuth } from '@/lib/auth-utils';
 
-// Load JWT secret from environment
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXT_PUBLIC_JWT_SECRET;
+// Add routes that don't require authentication
+const publicRoutes = [
+  '/',
+  '/login',
+  '/signup',
+  '/about',
+  '/contact',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/register',
+];
 
-// Define protected routes
-const protectedRoutes = [
-  '/dashboard',
-  '/profile',
-  '/projects',
+// Add routes that require email verification
+const verifiedRoutes = [
   '/submit-idea',
-  '/tasks',
   '/mentor-projects',
   '/community-projects',
 ];
 
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
-  // Check if the path is protected
-  if (protectedRoutes.some(route => path.startsWith(route))) {
-    const token = request.cookies.get('auth-token')?.value;
-
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    // Get response from next middleware
-    const response = NextResponse.next();
-
-    // Set cookie options for auth-token
-    response.cookies.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    });
-
-    try {
-      // Verify JWT
-      if (JWT_SECRET) {
-        jwt.verify(token, JWT_SECRET);
-        return NextResponse.next();
-      }
-      // If JWT_SECRET is not available, redirect to login
-      return NextResponse.redirect(new URL('/login', request.url));
-    } catch (error) {
-      // Invalid or expired token
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+  // Allow public routes
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  try {
+    // This will throw if not authenticated
+    const decoded = await verifyAuth(request);
+
+    // Check email verification for protected routes
+    if (verifiedRoutes.some(route => pathname.startsWith(route)) && !decoded.isVerified) {
+      return NextResponse.redirect(new URL('/login?verify=true', request.url));
+    }
+
+    // User is authenticated and verified if required, proceed
+    return NextResponse.next();
+  } catch (error) {
+    // Redirect to login for failed auth
+    const searchParams = new URLSearchParams();
+    if (pathname !== '/') {
+      searchParams.set('from', pathname);
+    }
+    const loginUrl = `/login${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    return NextResponse.redirect(new URL(loginUrl, request.url));
+  }
 }
 
-// Configure middleware matching
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/projects/:path*',
-    '/submit-idea/:path*',
-    '/tasks/:path*',
-    '/mentor-projects/:path*',
-    '/community-projects/:path*',
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public directory
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 };

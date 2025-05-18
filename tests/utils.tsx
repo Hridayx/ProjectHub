@@ -1,8 +1,10 @@
-import { render as testingLibraryRender } from '@testing-library/react';
+import { render as testingLibraryRender, cleanup } from '@testing-library/react';
 import { AuthProvider } from '@/components/auth-provider';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { expect, vi } from 'vitest';
 import type { User } from '@/types/auth';
+import { ThemeProvider } from '@/components/theme-provider';
+import { act } from '@testing-library/react';
 
 export * from '@testing-library/react';
 
@@ -17,7 +19,6 @@ const mockLocation = {
   reload: vi.fn()
 };
 
-// Add custom matchers for testing error messages
 // Add custom matchers for testing error messages
 declare global {
   namespace Vi {
@@ -42,12 +43,8 @@ expect.extend({
 });
 
 // Define types for user and auth state
-export interface TestUser {
+export interface TestUser extends Omit<User, 'id'> {
   id: string;
-  email: string;
-  username: string;
-  role: 'student' | 'mentor' | 'admin';
-  is_verified: boolean;
 }
 
 interface RenderOptions {
@@ -57,21 +54,56 @@ interface RenderOptions {
   };
 }
 
-// Custom render function with AuthProvider wrapper
-function Wrapper({ children }: { children: ReactNode }) {
+// Wrapper component that includes providers required for testing
+function Wrapper({ children, initialAuth }: { children: ReactNode; initialAuth?: RenderOptions['initialAuth'] }) {
   Object.defineProperty(window, 'location', {
     value: mockLocation,
     writable: true
-  });
-  
-  return <AuthProvider>{children}</AuthProvider>;
+  });    return (
+    <AuthProvider initialState={initialAuth}>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <>{children}</>
+      </ThemeProvider>
+    </AuthProvider>
+  );
 }
 
-const render = (ui: React.ReactElement) => {
-  return testingLibraryRender(ui, {
-    wrapper: Wrapper
+// Custom render function that includes providers and handles async updates
+async function render(ui: React.ReactElement, options: RenderOptions = {}) {
+  let rendered: ReturnType<typeof testingLibraryRender>;
+  
+  // Ensure any previous cleanup is complete
+  cleanup();
+  
+  // Reset location mock
+  mockLocation.href = 'http://localhost:3000/';
+  mockLocation.pathname = '/';
+  mockLocation.search = '';
+  mockLocation.hash = '';
+
+  // Mock theme to prevent hydration issues
+  vi.mock('next-themes', () => ({
+    useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+  }));
+  
+  await act(async () => {
+    rendered = testingLibraryRender(ui, {
+      wrapper: ({ children }) => (
+        <Wrapper initialAuth={options.initialAuth}>
+          {children}
+        </Wrapper>
+      ),
+    });
   });
-};
+
+  // Wait for any dynamic imports, theme initialization, and state updates
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  });
+
+  return rendered!;
+}
 
 // Reset location mock between tests
 beforeEach(() => {
@@ -83,66 +115,3 @@ beforeEach(() => {
 });
 
 export { render, mockLocation };
-
-// Mock responses for authentication endpoints with proper typing
-export interface AuthResponse {
-  ok: boolean;
-  json: () => Promise<{ user?: TestUser; error?: { code: string; message: string; status: number } }>;
-}
-
-export const mockResponses: Record<string, AuthResponse> = {
-  validLogin: {
-    ok: true,
-    json: async () => ({
-      user: {
-        id: 'test-user-id',
-        email: 'test@mahindrauniversity.edu.in',
-        username: 'testuser',
-        role: 'student',
-        is_verified: true
-      }
-    })
-  },
-  invalidCredentials: {
-    ok: false,
-    json: async () => ({
-      error: {
-        code: 'auth/invalid-credentials',
-        message: 'Invalid email or password',
-        status: 401
-      }
-    })
-  },
-  invalidEmailDomain: {
-    ok: false,
-    json: async () => ({
-      error: {
-        code: 'auth/invalid-email-domain',
-        message: 'Only @mahindrauniversity.edu.in email addresses are allowed',
-        status: 400
-      }
-    })
-  },
-  emailNotVerified: {
-    ok: false,
-    json: async () => ({
-      error: {
-        code: 'auth/email-not-verified',
-        message: 'Please verify your email address before logging in',
-        status: 403
-      }
-    })
-  },
-  successfulRegistration: {
-    ok: true,
-    json: async () => ({
-      user: {
-        id: 'new-user-id',
-        email: 'new@mahindrauniversity.edu.in',
-        username: 'newuser',
-        role: 'student',
-        is_verified: false
-      }
-    })
-  }
-};

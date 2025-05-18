@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     // Get user details
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, email, is_verified')
+      .select('id, username, email, role, is_verified')
       .eq('id', decoded.userId)
       .single();
 
@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
         id: user.id,
         username: user.username,
         email: user.email,
-        isVerified: user.is_verified
+        role: user.role,
+        is_verified: user.is_verified
       }
     });
   } catch (error) {

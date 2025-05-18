@@ -1,141 +1,136 @@
-﻿import { describe, test, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, mockLocation } from '../utils';
+﻿import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor, mockLocation } from '../utils';
 import { LoginForm } from '@/components/login-form';
 import { SignupForm } from '@/components/signup-form';
+import userEvent from '@testing-library/user-event';
 
 describe('Authentication System', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLocation.href = 'http://localhost:3000/';
+  });
+
   describe('LoginForm', () => {
     test('shows validation error for invalid email domain', async () => {
-      render(<LoginForm />);
+      const user = userEvent.setup();
+      await render(<LoginForm />);
 
-      fireEvent.change(screen.getByLabelText(/email/i), {
-        target: { value: 'test@invalid.com' }
-      });
-      fireEvent.change(screen.getByLabelText(/password/i), {
-        target: { value: 'Test@123Password' }
-      });
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      const passwordInput = screen.getByLabelText('Password');
+      const submitButton = screen.getByTestId('login-submit');
 
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      await user.type(emailInput, 'test@invalid.com');
+      await user.type(passwordInput, 'Test@123Password');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent(
           /only @mahindrauniversity\.edu\.in/i
         );
-      });
+      }, { timeout: 2000 });
     });
 
     test('shows error for invalid credentials', async () => {
-      render(<LoginForm />);
+      const user = userEvent.setup();
+      await render(<LoginForm />);
 
-      fireEvent.change(screen.getByLabelText(/email/i), {
-        target: { value: 'wrong@mahindrauniversity.edu.in' }
-      });
-      fireEvent.change(screen.getByLabelText(/password/i), {
-        target: { value: 'WrongPass123!' }
-      });
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      const passwordInput = screen.getByLabelText('Password');
+      const submitButton = screen.getByTestId('login-submit');
 
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      await user.type(emailInput, 'wrong@mahindrauniversity.edu.in');
+      await user.type(passwordInput, 'WrongPass123!');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent(
           /invalid email or password/i
         );
-      });
+      }, { timeout: 2000 });
     });
 
     test('handles successful login', async () => {
-      render(<LoginForm />);
+      const user = userEvent.setup();
+      await render(<LoginForm />);
 
-      // Reset location mock
-      mockLocation.href = 'http://localhost:3000/';
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      const passwordInput = screen.getByLabelText('Password');
+      const submitButton = screen.getByTestId('login-submit');
 
-      fireEvent.change(screen.getByLabelText(/email/i), {
-        target: { value: 'test.user@mahindrauniversity.edu.in' }
-      });
-      fireEvent.change(screen.getByLabelText(/password/i), {
-        target: { value: 'Test@123Password' }
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      await user.type(emailInput, 'test.user@mahindrauniversity.edu.in');
+      await user.type(passwordInput, 'Test@123Password');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(window.location.href).toContain('/dashboard');
-      });
+      }, { timeout: 2000 });
     });
   });
 
   describe('SignupForm', () => {
     test('validates password requirements', async () => {
-      render(<SignupForm />);
+      const user = userEvent.setup();
+      await render(<SignupForm />);
 
-      fireEvent.change(screen.getByLabelText(/username/i), {
-        target: { value: 'testuser' }
-      });
-      fireEvent.change(screen.getByLabelText(/email/i), {
-        target: { value: 'test@mahindrauniversity.edu.in' }
-      });
-      fireEvent.change(screen.getByLabelText(/^password$/i), {
-        target: { value: 'weak' }
-      });
+      const usernameInput = screen.getByRole('textbox', { name: /username/i });
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      const passwordInput = screen.getByLabelText(/^password$/i);
+      const confirmPasswordInput = screen.getByLabelText('confirm password');
+      const submitButton = screen.getByRole('button', { name: /sign up/i });
 
-      fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+      await user.type(usernameInput, 'testuser');
+      await user.type(emailInput, 'test@mahindrauniversity.edu.in');
+      await user.type(passwordInput, 'weak');
+      await user.type(confirmPasswordInput, 'weak');
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent(
           /password must be at least 8 characters/i
         );
-      });
+      }, { timeout: 2000 });
     });
 
     test('shows error for existing email', async () => {
-      render(<SignupForm />);
+      const user = userEvent.setup();
+      await render(<SignupForm />);
 
-      fireEvent.change(screen.getByLabelText(/username/i), {
-        target: { value: 'testuser' }
-      });
-      fireEvent.change(screen.getByLabelText(/email/i), {
-        target: { value: 'test.user@mahindrauniversity.edu.in' }
-      });
-      fireEvent.change(screen.getByLabelText(/^password$/i), {
-        target: { value: 'ValidPass123!' }
-      });
-      fireEvent.change(screen.getByLabelText(/confirm password/i), {
-        target: { value: 'ValidPass123!' }
-      });
+      const usernameInput = screen.getByRole('textbox', { name: /username/i });
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      const passwordInput = screen.getByLabelText(/^password$/i);
+      const confirmPasswordInput = screen.getByLabelText('confirm password');
+      const submitButton = screen.getByRole('button', { name: /sign up/i });
 
-      fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
-
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /user already exists/i
-        );
-      });
+      await user.type(usernameInput, 'testuser');
+      await user.type(emailInput, 'test.user@mahindrauniversity.edu.in');
+      await user.type(passwordInput, 'ValidPass123!');
+      await user.type(confirmPasswordInput, 'ValidPass123!');
+      await user.click(submitButton);        await waitFor(() => {
+          expect(screen.getByRole('alert')).toHaveTextContent(
+            /a user with this email already exists/i
+          );
+        }, { timeout: 2000 });
     });
 
     test('handles successful registration', async () => {
-      render(<SignupForm />);
+      const user = userEvent.setup();
+      await render(<SignupForm />);
 
-      // Reset location mock
-      mockLocation.href = 'http://localhost:3000/';
-      
-      fireEvent.change(screen.getByLabelText(/username/i), {
-        target: { value: 'newuser' }
-      });
-      fireEvent.change(screen.getByLabelText(/email/i), {
-        target: { value: 'new.user@mahindrauniversity.edu.in' }
-      });
-      fireEvent.change(screen.getByLabelText(/^password$/i), {
-        target: { value: 'NewPass123!' }
-      });
-      fireEvent.change(screen.getByLabelText(/confirm password/i), {
-        target: { value: 'NewPass123!' }
-      });
+      const usernameInput = screen.getByRole('textbox', { name: /username/i });
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      const passwordInput = screen.getByLabelText(/^password$/i);
+      const confirmPasswordInput = screen.getByLabelText('confirm password');
+      const submitButton = screen.getByRole('button', { name: /sign up/i });
 
-      fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+      await user.type(usernameInput, 'newuser');
+      await user.type(emailInput, 'new.user@mahindrauniversity.edu.in');
+      await user.type(passwordInput, 'NewPass123!');
+      await user.type(confirmPasswordInput, 'NewPass123!');
+      await user.click(submitButton);
 
       await waitFor(() => {
-        expect(window.location.href).toContain('/login?registered=true');
-      });
+        expect(mockLocation.href).toContain('/login?registered=true');
+      }, { timeout: 2000 });
     });
   });
 });
