@@ -84,7 +84,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-medium text-[#1e3a3a]">Call Us</h3>
-                    <p className="text-gray-600">+1 (555) 123-4567</p>
+                    <p className="text-gray-600">+91 123456789</p>
                     <p className="text-gray-600">Mon-Fri, 9:00 AM - 5:00 PM</p>
                   </div>
                 </div>
@@ -95,9 +95,9 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-medium text-[#1e3a3a]">Visit Us</h3>
-                    <p className="text-gray-600">123 University Avenue</p>
-                    <p className="text-gray-600">Innovation Campus, Building 4</p>
-                    <p className="text-gray-600">New Delhi, India 110001</p>
+                    <p className="text-gray-600">Mahindra University</p>
+                    <p className="text-gray-600">Phase-2 Hostel</p>
+                    <p className="text-gray-600">Hyderabad, India 110001</p>
                   </div>
                 </div>
               </div>
@@ -166,29 +166,6 @@ export default function ContactPage() {
                         onChange={handleChange}
                         required
                       />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="subject"
-                        className="block text-sm font-medium text-gray-700 mb-1"
-                      >
-                        Subject
-                      </label>
-                      <Select
-                        id="subject"
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleChange}
-                        required
-                      >
-                        <option value="">Select a subject</option>
-                        <option value="general">General Inquiry</option>
-                        <option value="support">Technical Support</option>
-                        <option value="projects">Project Information</option>
-                        <option value="mentorship">Mentorship Program</option>
-                        <option value="partnership">Partnership Opportunities</option>
-                      </Select>
                     </div>
 
                     <div>

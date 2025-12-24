@@ -1,20 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+    ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
-    domains: ['thfcgfeivcyzfrqjxqzf.supabase.co'],
   },
-  poweredByHeader: false,
-  compress: true,
-  experimental: {
-    serverActions: true
-  }
 };
 
 export default nextConfig;

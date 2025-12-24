@@ -1,14 +1,18 @@
-// Component: Replicates profile & settings form
 'use client';
 
 import type React from 'react';
-
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
-import { Select } from './ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 interface ProfileFormProps {
   initialData?: {
@@ -22,6 +26,21 @@ interface ProfileFormProps {
     linkedin: string;
   };
 }
+
+const departments = [
+  { value: 'engineering', label: 'Engineering & Computer Science' },
+  { value: 'business', label: 'Business' },
+  { value: 'creative', label: 'Creative Arts' },
+  { value: 'medical', label: 'Medical Science' },
+  { value: 'communication', label: 'Mass Communication' },
+  { value: 'physiotherapy', label: 'Physiotherapy' },
+] as const;
+
+const roles = [
+  { value: 'student', label: 'Student' },
+  { value: 'mentor', label: 'Mentor' },
+  { value: 'admin', label: 'Administrator' },
+] as const;
 
 export function ProfileForm({ initialData }: ProfileFormProps) {
   const [formData, setFormData] = useState(
@@ -38,13 +57,13 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   );
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, this would submit to an API
     console.log('Form submitted:', formData);
@@ -81,29 +100,43 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
-          <Select id="role" name="role" value={formData.role} onChange={handleChange} required>
-            <option value="student">Student</option>
-            <option value="mentor">Mentor</option>
-            <option value="admin">Administrator</option>
+          <Select
+            defaultValue={formData.role}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, role: value }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.value} value={role.value}>
+                  {role.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="department">Department</Label>
           <Select
-            id="department"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            required
+            defaultValue={formData.department}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, department: value }))
+            }
           >
-            <option value="">Select Department</option>
-            <option value="engineering">Engineering & Computer Science</option>
-            <option value="business">Business</option>
-            <option value="creative">Creative Arts</option>
-            <option value="medical">Medical Science</option>
-            <option value="communication">Mass Communication</option>
-            <option value="physiotherapy">Physiotherapy</option>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((dept) => (
+                <SelectItem key={dept.value} value={dept.value}>
+                  {dept.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
       </div>

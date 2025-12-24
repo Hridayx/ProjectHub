@@ -5,6 +5,7 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 import { setupServer } from 'msw/node';
 import { HttpResponse, http } from 'msw';
 import * as dotenv from 'dotenv';
+import type { ReactElement } from 'react';
 
 // Load test environment variables
 dotenv.config({ path: '.env.test' });
@@ -22,6 +23,9 @@ const mockLocation = {
   pathname: '/',
   search: '',
   hash: '',
+  assign: vi.fn((url: string) => {
+    mockLocation.href = url;
+  })
 };
 
 const mockRouter = {
@@ -32,17 +36,32 @@ const mockRouter = {
   refresh: vi.fn(),
 };
 
-Object.defineProperty(window, 'location', { value: mockLocation, writable: true });
+// Mock window.location
+const windowLocation = {
+  ...mockLocation,
+  toString: () => mockLocation.href
+};
+
+Object.defineProperty(window, 'location', {
+  value: windowLocation,
+  writable: true,
+  configurable: true
+});
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => mockRouter,
+  useRouter: () => ({
+    ...mockRouter,
+    push: (url: string) => {
+      windowLocation.assign(url);
+    }
+  }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock window.matchMedia and localStorage for next-themes
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -53,6 +72,11 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+vi.mock('next-themes', () => ({
+  ThemeProvider: ({ children }: { children: ReactElement }) => children,
+  useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
+}));
 
 const localStorageMock = {
   getItem: vi.fn(),

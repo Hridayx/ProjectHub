@@ -100,6 +100,7 @@ export function SignupForm() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
@@ -110,15 +111,21 @@ export function SignupForm() {
       const data = await response.json();
 
       if (response.ok) {
-        const redirectUrl = '/login?registered=true';
-        window.location.href = `http://localhost:3000${redirectUrl}`;
-        router.push(redirectUrl);
+        // Show success message before redirecting
+        setError('');
+        window.location.assign('/login?registered=true');
+      } else if (data.error?.code === 'auth/user-exists') {
+        setError('A user with this email already exists');
       } else {
-        const error = data.error as ApiError;
-        setError(error?.message || 'Registration failed');
+        setError(data.error?.message || 'Registration failed');
       }
     } catch (error) {
-      setError('An error occurred during registration');
+      // Use more specific error message from the server if available
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred during registration');
+      }
     } finally {
       setLoading(false);
     }
@@ -132,7 +139,11 @@ export function SignupForm() {
       </div>
 
       {error && (
-        <div role="alert" className="p-3 text-sm bg-red-50 border border-red-200 text-red-600 rounded">
+        <div 
+          role="alert" 
+          className="p-3 text-sm bg-red-50 border border-red-200 text-red-600 rounded"
+          aria-live="polite"
+        >
           {error}
         </div>
       )}
@@ -198,26 +209,35 @@ export function SignupForm() {
             required
             aria-label="confirm password"
             aria-required="true"
-            aria-invalid={!!error && formData.confirmPassword !== formData.password}
+            aria-invalid={!!error && formData.password !== formData.confirmPassword}
           />
         </div>
 
         <Button
           type="submit"
-          className="w-full bg-[#6b3e7c] hover:bg-[#5a2e6b]"
+          className="w-full bg-[#6b3e7c] hover:bg-[#5a2e6b] transition-colors"
+          data-testid="signup-submit"
           disabled={loading}
           aria-disabled={loading}
+          aria-busy={loading}
         >
-          {loading ? 'Creating Account...' : 'Sign Up'}
+          {loading ? (
+            <>
+              <span className="animate-pulse mr-2">⋯</span>
+              Creating Account...
+            </>
+          ) : (
+            'Create Account'
+          )}
         </Button>
-      </form>
 
-      <p className="text-center text-sm text-gray-500">
-        Already have an account?{' '}
-        <Link href="/login" className="text-[#6b3e7c] hover:underline">
-          Sign in
-        </Link>
-      </p>
+        <p className="text-center text-sm">
+          Already have an account?{' '}
+          <Link href="/login" className="text-[#6b3e7c] hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </form>
     </div>
   );
 }

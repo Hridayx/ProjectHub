@@ -4,16 +4,18 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, BookOpen, Users, Code, Brain, Database, Shield, Cloud } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ProjectCard } from '@/components/project-card';
 
 export default function Home() {
-  const [imgSrc, setImgSrc] = useState('/placeholder.jpg');
+  const [imgSrc, setImgSrc] = useState('/images/healthcare-bot.jpg');
   const [imgLoaded, setImgLoaded] = useState(false);
 
   const handleImageError = () => {
-    setImgSrc('https://placehold.co/600x400?text=AI+Healthcare+Assistant');
+    console.error('Failed to load healthcare bot image');
+    setImgSrc('/placeholder.jpg');
   };
 
   const handleImageLoad = () => {
@@ -34,13 +36,14 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              ProjectHub
+              Project<span className="text-[#6b3e7c]">Hub</span>
             </motion.h1>
             <motion.div
               className="text-3xl md:text-4xl font-light mb-8 border-l-4 border-yellow-400 pl-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
+              
             >
               <p>
                 "A student-powered ecosystem to connect, collaborate, and launch real projects in
@@ -277,22 +280,28 @@ export default function Home() {
             Featured Project
           </motion.h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center max-w-7xl mx-auto">
             <motion.div
-              className="rounded-xl overflow-hidden shadow-lg"
+              className="rounded-2xl overflow-hidden shadow-xl bg-white"
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <img
-                src={imgSrc}
-                alt="AI Healthcare Assistant Project"
-                className="w-full h-auto"
-                onError={handleImageError}
-                onLoad={handleImageLoad}
-              />
+              <div className="relative aspect-video">
+                <Image
+                  src={imgSrc}
+                  alt="AI Healthcare Assistant Project - An intelligent system for patient care management"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                  priority
+                  quality={90}
+                  onError={handleImageError}
+                  onLoad={handleImageLoad}
+                />
+              </div>
             </motion.div>
 
             <motion.div
@@ -301,31 +310,29 @@ export default function Home() {
               transition={{ duration: 0.3, delay: 0.2 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
+              className="space-y-6"
             >
-              <span className="inline-block bg-[#6b3e7c] text-white px-3 py-1 rounded-full text-sm font-medium mb-4">
+              <span className="inline-block bg-[#6b3e7c] text-white px-4 py-1.5 rounded-full text-sm font-medium">
                 Artificial Intelligence
               </span>
-              <h3 className="text-2xl font-bold mb-4 text-[#1e3a3a]">
+              <h3 className="text-3xl font-bold text-[#1e3a3a]">
                 AI-Powered Healthcare Assistant
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 text-lg leading-relaxed">
                 This innovative project combines natural language processing and machine learning to
                 create an AI assistant that helps patients manage medications, schedule
                 appointments, and access health information. Students will work with healthcare
                 professionals to ensure the solution meets real-world needs.
               </p>
-              <div className="flex flex-wrap gap-2 mb-6">
-                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">Machine Learning</span>
-                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">NLP</span>
-                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">Healthcare</span>
-                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">Python</span>
+              <div className="flex flex-wrap gap-2">
+                <span className="bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium text-gray-700">Machine Learning</span>
+                <span className="bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium text-gray-700">NLP</span>
+                <span className="bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium text-gray-700">Healthcare</span>
+                <span className="bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium text-gray-700">Python</span>
               </div>
-              <div className="flex gap-4">
-                <Button asChild className="bg-[#6b3e7c] hover:bg-[#5a2e6b]">
+              <div>
+                <Button asChild className="bg-[#6b3e7c] hover:bg-[#5a2e6b] px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all">
                   <Link href="/project/1">View Project Details</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/mentors">Find a Mentor</Link>
                 </Button>
               </div>
             </motion.div>
@@ -333,132 +340,56 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Program Details Section */}
-      <section className="py-16">
+      {/* Mentors Section */}
+      <section className="py-24 bg-[#14322f]" data-testid="mentors-section" aria-labelledby="mentors-heading">
         <div className="container mx-auto px-4">
-          <motion.h2
-            className="text-3xl font-bold mb-10 text-[#1e3a3a]"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            Computer Science & AI Programs
-          </motion.h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 bg-[#1e3a3a] text-white p-8 rounded-xl">
-              <h3 className="text-2xl font-bold mb-6">Computer Science & AI</h3>
-              <p className="mb-6">
-                Computer Science and AI are fields that solve some of the most impactful problems
-                the world faces today. At ProjectHub, we connect students with real-world projects
-                that require logical thinking and creative problem-solving.
-              </p>
-              <p>
-                We partner with industry leaders to provide our students world-class learning and
-                experiential facilities to develop practical skills and knowledge sought-after in
-                global tech markets.
-              </p>
+          <div className="flex flex-col items-center max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <motion.h2
+                id="mentors-heading"
+                className="text-4xl font-bold mb-6 text-white"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                Meet Our Mentors
+              </motion.h2>
+              <motion.p
+                className="text-gray-200 text-xl max-w-3xl mx-auto leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                Connect with industry experts and experienced professionals who are passionate about
+                guiding the next generation of tech innovators.
+              </motion.p>
             </div>
 
-            <div className="lg:col-span-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-[#f0e5ff] p-3 rounded-full">
-                      <Code className="h-6 w-6 text-[#6b3e7c]" />
-                    </div>
-                    <h4 className="text-xl font-bold">BSc Computer Science</h4>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    Learn fundamental programming concepts, algorithms, data structures, and
-                    software engineering principles to build robust applications.
-                  </p>
-                  <Button asChild variant="link" className="p-0 text-[#6b3e7c]">
-                    <Link href="/projects?program=bsc-computer-science">
-                      View Projects <ArrowRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </motion.div>
+            <motion.div
+              className="relative w-full h-[600px] rounded-2xl overflow-hidden shadow-2xl mb-12"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Image
+                src="/images/mentors.png"
+                alt="ProjectHub Mentors collaborating with students"
+                fill
+                style={{ objectFit: 'cover' }}
+                className="w-[1000px]"
+                priority
+              />
+            </motion.div>
 
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.3 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-[#f0e5ff] p-3 rounded-full">
-                      <Brain className="h-6 w-6 text-[#6b3e7c]" />
-                    </div>
-                    <h4 className="text-xl font-bold">BSc Artificial Intelligence</h4>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    Specialize in machine learning, neural networks, computer vision, and natural
-                    language processing to build intelligent systems.
-                  </p>
-                  <Button asChild variant="link" className="p-0 text-[#6b3e7c]">
-                    <Link href="/projects?program=bsc-artificial-intelligence">
-                      View Projects <ArrowRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </motion.div>
-
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.4 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-[#f0e5ff] p-3 rounded-full">
-                      <Database className="h-6 w-6 text-[#6b3e7c]" />
-                    </div>
-                    <h4 className="text-xl font-bold">BSc Data Science</h4>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    Master data analysis, statistical modeling, and visualization techniques to
-                    extract insights from complex datasets.
-                  </p>
-                  <Button asChild variant="link" className="p-0 text-[#6b3e7c]">
-                    <Link href="/projects?program=bsc-data-science">
-                      View Projects <ArrowRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </motion.div>
-
-                <motion.div
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.5 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-[#f0e5ff] p-3 rounded-full">
-                      <Shield className="h-6 w-6 text-[#6b3e7c]" />
-                    </div>
-                    <h4 className="text-xl font-bold">BSc Cybersecurity</h4>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    Develop expertise in network security, ethical hacking, cryptography, and
-                    security risk management.
-                  </p>
-                  <Button asChild variant="link" className="p-0 text-[#6b3e7c]">
-                    <Link href="/projects?program=bsc-cybersecurity">
-                      View Projects <ArrowRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </motion.div>
-              </div>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.4 }}
+            >
+              <Button asChild className="bg-[#6b3e7c] hover:bg-[#5a2e6b] text-white text-lg px-10 py-6 rounded-lg shadow-lg hover:shadow-xl transition-all">
+                <Link href="/mentors">Connect with Mentors</Link>
+              </Button>
+            </motion.div>
           </div>
         </div>
       </section>

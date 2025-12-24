@@ -49,15 +49,14 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
+      const data = await response.json();      if (response.ok) {
         setAuthState({
           user: data.user,
           loading: false,
           error: null,
         });
         router.refresh();
+        router.push('/dashboard');
         return { success: true };
       }
 

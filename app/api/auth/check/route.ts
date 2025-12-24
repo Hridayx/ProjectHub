@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
         username: user.username,
         email: user.email,
         role: user.role,
-        is_verified: user.is_verified
+        isVerified: user.is_verified
       }
     });
   } catch (error) {

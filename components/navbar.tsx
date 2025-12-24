@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Logo } from './ui/logo';
 import { X, Search, ChevronDown } from 'lucide-react';
 import {
   DropdownMenu,
@@ -37,9 +38,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo and Main Nav */}
           <div className="flex items-center space-x-8">
-            <Link href="/" className="text-white text-2xl font-bold">
-              ProjectHub
-            </Link>
+            <Logo />
             <div className="hidden md:flex items-center space-x-8">
               <NavLink href="/about">About</NavLink>
               <DropdownMenu>

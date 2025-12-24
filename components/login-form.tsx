@@ -58,18 +58,19 @@ export function LoginForm() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        router.push('/dashboard');
+        await router.push('/dashboard');
       } else {
         setError(data.error?.message || 'Invalid email or password');
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -104,6 +105,7 @@ export function LoginForm() {
             autoComplete="email"
             aria-label="Email"
             aria-required="true"
+
             aria-invalid={!!error}
             aria-describedby={error ? 'login-error' : undefined}
             placeholder="your.name@mahindrauniversity.edu.in"
